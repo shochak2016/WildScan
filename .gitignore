@@ -2,6 +2,7 @@ node_modules/
 dist/
 .DS_Store
 Data/WildScan_Data/animal_phylum_data/all_images/*
+Data/WildScan_Data/bird_sound_genus_data/audio_files/*
 Data/WildScan_Data/animal_phylum_data/all_csvs/
 images/
 *.jpg
