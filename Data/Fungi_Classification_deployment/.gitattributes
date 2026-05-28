@@ -1,0 +1,2 @@
+/Users/maramharitha/WildScan/Data/Fungi_Classification_deployment/best_model.pth filter=lfs diff=lfs merge=lfs -text
+best_model.pth filter=lfs diff=lfs merge=lfs -text
