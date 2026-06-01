@@ -1,0 +1,15 @@
+# Bird sound classifier — full pipeline (download → clean → spectrogram → train → CPU inference)
+# Install: ../../.venv/bin/pip install -r requirements.txt
+torch
+torchaudio
+torchvision
+timm                # EfficientNet-B0 backbone
+librosa             # audio I/O, mel / PCEN spectrograms
+soundfile           # fast audio read/write
+noisereduce         # optional spectral-gating denoise (toggle)
+scipy               # band-pass / high-pass filtering
+numpy
+pandas
+scikit-learn        # label encoding, stratified splits, metrics
+requests            # Xeno-canto API + downloads
+tqdm                # progress bars

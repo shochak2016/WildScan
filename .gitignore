@@ -8,3 +8,23 @@ images/
 *.png
 *.pth
 cleaned_dataset.csv
+
+# Python venv
+.venv/
+
+# Bird audio classifier — secrets + raw audio + precomputed spectrograms (large, regenerable)
+Bird_Classification_deployment/.xc_api_key
+Bird_Classification_deployment/recordings.csv
+Bird_Classification_deployment/spectrograms.csv
+Bird_Classification_deployment/sweep_results.csv
+Bird_Classification_deployment/audio/
+Bird_Classification_deployment/spectrograms/
+*.mp3
+*.wav
+*.ogg
+*.npy
+Bird_Classification_deployment/*.log
+
+# Ship the ensemble weights (16 MB + 26 MB, both < GitHub's 100 MB/file limit)
+!Bird_Classification_deployment/model_b0.pth
+!Bird_Classification_deployment/model_b1.pth
