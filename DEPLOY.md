@@ -5,36 +5,39 @@ host. They must be separate — **Vercel cannot run the models** (PyTorch + the 
 files blow past the 250 MB serverless limit, and there's no persistent process).
 
 ```
-[ Vercel: frontend/ (React) ]  --HTTPS-->  [ Render/Railway: backend/ (FastAPI + models) ]
+[ Vercel: frontend/ (React) ]  --HTTPS-->  [ Hugging Face Space: backend/ (FastAPI + models) ]
 ```
 
-## 1. Backend → Render (or Railway), Docker
+## 1. Backend → Hugging Face Spaces (free, 16 GB RAM)
 
-The models are in **Git LFS**, so the host must pull them.
-
-1. New **Web Service** from this repo, **Language/Runtime = Docker**.
-   - The `Dockerfile` is at the **repo root** — leave Dockerfile Path at its **default** (`./Dockerfile`). Do *not* set a custom path.
-   - **Enable Git LFS** for the repo in the host settings (so weights download as real bytes, not pointers — this is how the models get materialized).
-2. Env vars:
-   - `CORS_ORIGINS=https://<your-vercel-app>.vercel.app` (lock CORS to your frontend).
-   - `LLM_API_KEY=<your key>` — enables the `/assess` threat summary. Free key from
-     [Groq](https://console.groq.com/keys). (Optional: `LLM_BASE_URL`, `LLM_MODEL` to
-     use Gemini/OpenRouter/OpenAI instead of Groq's default.)
-   - `PORT` is provided by the host; the container respects it.
-3. Deploy. Verify:
+1. [huggingface.co/new-space](https://huggingface.co/new-space) → **SDK: Docker → "Blank"** template. Name it e.g. `wildscan-api`.
+2. Push this repo to the Space's git remote (the repo-root `Dockerfile` + `README.md`
+   frontmatter `sdk: docker`, `app_port: 7860` drive the build):
    ```bash
-   curl https://<your-backend>.onrender.com/health     # {"status":"ok"}
-   curl https://<your-backend>.onrender.com/models      # which models loaded
+   git remote add space https://huggingface.co/spaces/<you>/wildscan-api
+   git push space repo-reorg:main      # weights go via HF's free Git LFS
    ```
-   `bird` should always load; `fungi` loads if LFS pulled its weights.
+3. Space → **Settings → Variables and secrets** → add:
+   - `LLM_API_KEY` = your free [Groq](https://console.groq.com/keys) key (enables `/assess`).
+   - `CORS_ORIGINS` = `https://<your-vercel-app>.vercel.app` (optional; defaults to `*`).
+4. Wait for the build, then verify (Space URL is `https://<you>-wildscan-api.hf.space`):
+   ```bash
+   curl https://<you>-wildscan-api.hf.space/health    # {"status":"ok"}
+   curl https://<you>-wildscan-api.hf.space/models      # which models loaded
+   ```
+   `bird` always loads; `fungi` loads if its LFS weights pushed as real bytes.
 
-> First request is slow (model load / cold start). Use a paid/always-on instance to avoid sleeping.
+> Free Spaces **sleep after ~48 h idle**; the first request after sleep cold-starts
+> (~10–30 s to load torch + models). Fine for a demo.
+
+**Alternatives** (same Dockerfile): **Railway** / **Fly.io** (cheap, scale-to-zero),
+or **Render** (default `./Dockerfile`, enable Git LFS, ≥2 GB instance — pricier).
 
 ## 2. Frontend → Vercel
 
 1. Import the repo in Vercel. **Set Root Directory = `frontend`** (the app lives in a subfolder).
    Framework preset auto-detects **Vite** (`vercel.json` is included).
-2. Env var: `VITE_API_URL = https://<your-backend>.onrender.com`.
+2. Env var: `VITE_API_URL = https://<you>-wildscan-api.hf.space`.
 3. Deploy. The app uploads images/audio to `${VITE_API_URL}/classify/{image,audio}`.
 
 ## Behavior

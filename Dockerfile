@@ -8,7 +8,8 @@ FROM python:3.12-slim
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
         ffmpeg libsndfile1 && \
-    rm -rf /var/lib/apt/lists/*
+    rm -rf /var/lib/apt/lists/* && \
+    useradd -m -u 1000 user          # HF Spaces runs containers as non-root uid 1000
 
 WORKDIR /app
 
@@ -16,11 +17,13 @@ WORKDIR /app
 COPY backend/requirements.txt /app/backend/requirements.txt
 RUN pip install --no-cache-dir -r /app/backend/requirements.txt
 
-# API + models
+# API + models (world-readable; the non-root user can read them)
 COPY backend /app/backend
 COPY Models /app/Models
 
-ENV PORT=8000 CORS_ORIGINS=*
-EXPOSE 8000
+USER user
+# HF Spaces expects the app on app_port (7860 here). Render/Railway set $PORT and override.
+ENV PORT=7860 CORS_ORIGINS=*
+EXPOSE 7860
 WORKDIR /app/backend
 CMD ["sh", "-c", "uvicorn app:app --host 0.0.0.0 --port ${PORT}"]

@@ -10,7 +10,5 @@ librosa
 soundfile
 scipy
 numpy
-pandas
 pillow
-scikit-learn
 requests
