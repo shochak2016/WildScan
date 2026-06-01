@@ -160,12 +160,42 @@ class AnimalModel:
         return out
 
 
+class AmphibianModel:
+    name, category, kind = "amphibian", "Amphibians", "audio"
+
+    def __init__(self):
+        d = MODELS / "amphibian"
+        sys.path.insert(0, str(d))
+        import predict_amphibian as pa
+        self.pa = pa
+        self.models = pa.load_models(str(d / "amphibian_output"))
+
+    def predict(self, path, top_k=5):
+        family, conf, _top3, probs = self.pa.predict(path, self.models)
+        labels = self.models["labels"]
+        if probs is not None:
+            order = [int(i) for i in np.argsort(probs)[::-1][:top_k]]
+        else:
+            order = [int(list(labels).index(family))]
+        out = []
+        for i in order:
+            lab = str(labels[i])
+            out.append({"label": lab, "scientific_name": "",
+                        "examples": self.pa.FAMILY_EXAMPLES.get(lab, ""),
+                        "confidence": float(probs[i]) if probs is not None else float(conf or 0.0),
+                        "category": self.category, "model": self.name})
+        return out
+
+
 # Register model classes with the weight file that gates loading them.
 IMAGE_MODELS = [
     (FungiModel, MODELS / "fungi" / "best_model.pth"),
     (AnimalModel, MODELS / "california_animal" / "final_production_wildscan_model.pth"),
 ]
-AUDIO_MODELS = [(BirdModel, MODELS / "bird" / "model_b0.pth")]
+AUDIO_MODELS = [
+    (BirdModel, MODELS / "bird" / "model_b0.pth"),
+    (AmphibianModel, MODELS / "amphibian" / "amphibian_output" / "voting_ensemble.joblib"),
+]
 
 LOADED = {"image": [], "audio": []}
 
@@ -227,8 +257,18 @@ async def classify_audio(file: UploadFile = File(...)):
         raise HTTPException(503, "No audio models available on this host.")
     tmp = _save_tmp(file, Path(file.filename or "aud").suffix or ".wav")
     try:
-        preds = LOADED["audio"][0].predict(tmp)
-        return {"top": preds[0], "candidates": preds[:5], "routed_to": preds[0]["category"]}
+        # Run EVERY audio model, then return the most confident result.
+        all_preds = []
+        for m in LOADED["audio"]:
+            try:
+                all_preds += m.predict(tmp)
+            except Exception as e:
+                print(f"[warn] {m.name} failed: {e}")
+        if not all_preds:
+            raise HTTPException(500, "All audio models failed")
+        all_preds.sort(key=lambda p: p["confidence"], reverse=True)
+        return {"top": all_preds[0], "candidates": all_preds[:5],
+                "routed_to": all_preds[0]["category"]}
     finally:
         os.unlink(tmp)
 

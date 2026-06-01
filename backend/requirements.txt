@@ -12,3 +12,6 @@ scipy
 numpy
 pillow
 requests
+onnxruntime
+joblib
+scikit-learn

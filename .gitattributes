@@ -1,3 +1,6 @@
 /Users/maramharitha/WildScan/Data/Fungi_Classification_deployment/best_model.pth filter=lfs diff=lfs merge=lfs -text
 *.pth filter=lfs diff=lfs merge=lfs -text
 Data/Fungi_Classification_deployment/best_model.pth filter=lfs diff=lfs merge=lfs -text
+*.joblib filter=lfs diff=lfs merge=lfs -text
+*.onnx filter=lfs diff=lfs merge=lfs -text
+*.npy filter=lfs diff=lfs merge=lfs -text
