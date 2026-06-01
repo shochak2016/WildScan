@@ -222,3 +222,13 @@ async def assess(payload: dict):
     if level not in ("safe", "caution", "dangerous"):
         level = "caution"
     return {"summary": summary, "threat_level": level}
+
+
+# ---------------------------------------------------------------------------
+# Serve the built React frontend at "/" (the API routes above take precedence).
+# Present only when built into the image (see Dockerfile stage 1).
+# ---------------------------------------------------------------------------
+_FE = ROOT / "frontend_dist"
+if _FE.exists():
+    from fastapi.staticfiles import StaticFiles
+    app.mount("/", StaticFiles(directory=str(_FE), html=True), name="frontend")
