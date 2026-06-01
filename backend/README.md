@@ -31,7 +31,8 @@ So on a host that hasn't run `git lfs pull`, those models stay disabled.
 - **fungi** (image) — activates once `git lfs pull` materializes `Models/fungi/best_model.pth`.
 - animal/plant image models: not wired yet (no labels / no committed weights — see repo README).
 
-The provided `Dockerfile` installs `git-lfs` and runs `git lfs pull` at build time.
+The repo-root `Dockerfile` copies `Models/`; enable **Git LFS** on the host so the
+checkout has real weight bytes before the build (see `../DEPLOY.md`).
 
 ## Deploy
 See [`../DEPLOY.md`](../DEPLOY.md) — backend on Render/Railway (Docker), frontend on Vercel.

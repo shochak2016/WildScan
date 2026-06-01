@@ -12,9 +12,9 @@ files blow past the 250 MB serverless limit, and there's no persistent process).
 
 The models are in **Git LFS**, so the host must pull them.
 
-1. New **Web Service** from this repo, environment = **Docker**.
-   - Dockerfile path: `backend/Dockerfile`, build context: repo root.
-   - **Enable Git LFS** for the repo in the host settings (so weights download as real bytes, not pointers).
+1. New **Web Service** from this repo, **Language/Runtime = Docker**.
+   - The `Dockerfile` is at the **repo root** — leave Dockerfile Path at its **default** (`./Dockerfile`). Do *not* set a custom path.
+   - **Enable Git LFS** for the repo in the host settings (so weights download as real bytes, not pointers — this is how the models get materialized).
 2. Env vars:
    - `CORS_ORIGINS=https://<your-vercel-app>.vercel.app` (lock CORS to your frontend).
    - `LLM_API_KEY=<your key>` — enables the `/assess` threat summary. Free key from
