@@ -1,0 +1,32 @@
+{
+  "model_architecture": "ensemble:b0+b1",
+  "num_classes": 50,
+  "best_val_top1": 0.7946308724832215,
+  "norm_mean": 0.4769448935985565,
+  "norm_std": 0.45152363181114197,
+  "spectrogram": {
+    "sr": 32000,
+    "n_fft": 1024,
+    "hop_length": 512,
+    "n_mels": 128,
+    "fmin": 150,
+    "fmax": 15000,
+    "window_s": 5.0,
+    "target_frames": 313,
+    "repr": "pcen"
+  },
+  "models": [
+    {
+      "file": "model_b0.pth",
+      "arch": "efficientnet_b0"
+    },
+    {
+      "file": "model_b1.pth",
+      "arch": "efficientnet_b1"
+    }
+  ],
+  "ensemble_member_top1": {
+    "b0": 0.7785234899328859,
+    "b1": 0.7812080536912752
+  }
+}
