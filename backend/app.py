@@ -135,6 +135,13 @@ class AnimalModel:
             transforms.ToTensor(),
             transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
         ])
+        # recovered label mapping (sorted species = training label order)
+        lp = MODELS / "california_animal" / "labels.json"
+        if lp.exists():
+            d = json.load(open(lp))
+            self.species, self.common = d["species"], d.get("common", {})
+        else:
+            self.species, self.common = None, {}
 
     def predict(self, path, top_k=5):
         import torch.nn.functional as F
@@ -143,10 +150,14 @@ class AnimalModel:
         with self.torch.no_grad():
             probs = F.softmax(self.model(x), dim=1)[0].numpy()
         order = probs.argsort()[::-1][:top_k]
-        # NOTE: species label list not available yet — placeholder labels for now.
-        return [{"label": f"Animal (class {int(i)})", "scientific_name": "",
-                 "examples": "", "confidence": float(probs[i]),
-                 "category": self.category, "model": self.name} for i in order]
+        out = []
+        for i in order:
+            i = int(i)
+            sci = self.species[i] if self.species else ""
+            label = self.common.get(sci, sci) if sci else f"Animal (class {i})"
+            out.append({"label": label, "scientific_name": sci, "examples": "",
+                        "confidence": float(probs[i]), "category": self.category, "model": self.name})
+        return out
 
 
 # Register model classes with the weight file that gates loading them.
