@@ -114,8 +114,46 @@ class FungiModel:
         return out
 
 
+class AnimalModel:
+    name, category, kind = "animal", "Animals", "image"
+    WEIGHTS = "california_animal/final_production_wildscan_model.pth"
+
+    def __init__(self):
+        import torch
+        import timm
+        from torchvision import transforms
+        self.torch = torch
+        self.model = timm.create_model("efficientnet_b0", pretrained=False, num_classes=30)
+        sd = torch.load(MODELS / self.WEIGHTS, map_location="cpu", weights_only=False)
+        if isinstance(sd, dict) and "state_dict" in sd:
+            sd = sd["state_dict"]
+        self.model.load_state_dict(sd)
+        self.model.eval()
+        # matches training: 256px, ImageNet normalization
+        self.tf = transforms.Compose([
+            transforms.Resize((256, 256)),
+            transforms.ToTensor(),
+            transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
+        ])
+
+    def predict(self, path, top_k=5):
+        import torch.nn.functional as F
+        from PIL import Image
+        x = self.tf(Image.open(path).convert("RGB")).unsqueeze(0)
+        with self.torch.no_grad():
+            probs = F.softmax(self.model(x), dim=1)[0].numpy()
+        order = probs.argsort()[::-1][:top_k]
+        # NOTE: species label list not available yet — placeholder labels for now.
+        return [{"label": f"Animal (class {int(i)})", "scientific_name": "",
+                 "examples": "", "confidence": float(probs[i]),
+                 "category": self.category, "model": self.name} for i in order]
+
+
 # Register model classes with the weight file that gates loading them.
-IMAGE_MODELS = [(FungiModel, MODELS / "fungi" / "best_model.pth")]
+IMAGE_MODELS = [
+    (FungiModel, MODELS / "fungi" / "best_model.pth"),
+    (AnimalModel, MODELS / "california_animal" / "final_production_wildscan_model.pth"),
+]
 AUDIO_MODELS = [(BirdModel, MODELS / "bird" / "model_b0.pth")]
 
 LOADED = {"image": [], "audio": []}
