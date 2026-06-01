@@ -1,38 +1,42 @@
 # backend — WildScan inference API
 
 FastAPI service that serves the models in [`../Models/`](../Models/) to the
-[`../frontend/`](../frontend/). The frontend (on Vercel) uploads a file; this API
-runs the models and returns the prediction.
+[`../frontend/`](../frontend/). The frontend uploads a file; this API runs the
+models and returns the prediction (plus an optional LLM threat summary).
 
 ## Endpoints
 | Method | Path | Body | Returns |
 |--------|------|------|---------|
 | GET | `/health` | — | `{status}` |
-| GET | `/models` | — | which models loaded |
-| POST | `/classify/image` | multipart `file` | runs **every** image model, returns the **top-confidence** result (auto-routes plant/animal/fungi) |
-| POST | `/classify/audio` | multipart `file` | runs the **bird** model |
+| GET | `/models` | — | which models are loaded |
+| POST | `/classify/image` | multipart `file` | runs the image models, returns the **top-confidence** result (auto-routes plant/animal/fungi) |
+| POST | `/classify/audio` | multipart `file` | runs the audio model |
+| POST | `/assess` | `{"name": "..."}` | LLM 3-sentence summary + threat level (needs `LLM_API_KEY`) |
 
 Response shape: `{ top: {label, scientific_name, examples, confidence, category, model}, candidates: [...], routed_to }`.
 
 ## Run locally
 ```bash
 pip install -r requirements.txt
-uvicorn app:app --reload --port 8000   # run from backend/
-curl -F file=@call.wav  localhost:8000/classify/audio
+git lfs install && git lfs pull          # fetch model weights (Git LFS)
+uvicorn app:app --reload --port 8000     # run from backend/
 curl -F file=@photo.jpg localhost:8000/classify/image
+curl -F file=@clip.wav  localhost:8000/classify/audio
 ```
 
-## Models & Git LFS  ⚠️
-Weights are tracked in **Git LFS**. A model is loaded only if its weight file has
-**real bytes** (not an LFS pointer); pointer files are skipped with a log line.
-So on a host that hasn't run `git lfs pull`, those models stay disabled.
+## Environment
+| Var | Purpose |
+|-----|---------|
+| `LLM_API_KEY` | enables `/assess` (free key: [Groq](https://console.groq.com/keys)) |
+| `LLM_BASE_URL`, `LLM_MODEL` | optional — point at Gemini / OpenRouter / OpenAI instead of Groq |
+| `CORS_ORIGINS` | comma-separated allowed origins (default `*`) |
+| `PORT` | server port (default 7860) |
 
-- **bird** (audio) — always available (real weights in repo).
-- **fungi** (image) — activates once `git lfs pull` materializes `Models/fungi/best_model.pth`.
-- animal/plant image models: not wired yet (no labels / no committed weights — see repo README).
-
-The repo-root `Dockerfile` copies `Models/`; enable **Git LFS** on the host so the
-checkout has real weight bytes before the build (see `../DEPLOY.md`).
+## Models & Git LFS
+Model weights are tracked in **Git LFS**, loaded at startup from `../Models/`. Enable
+Git LFS on the host (or run `git lfs pull`) so the checkout has the real weight bytes.
+The API loads whichever models are present and logs the active set at startup
+(`GET /models`).
 
 ## Deploy
-See [`../DEPLOY.md`](../DEPLOY.md) — backend on Render/Railway (Docker), frontend on Vercel.
+See [`../DEPLOY.md`](../DEPLOY.md) — single container on Hugging Face Spaces (or Render / Railway).
