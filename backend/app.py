@@ -19,18 +19,25 @@ Dockerfile).
 Run locally:  uvicorn app:app --reload --port 8000
 """
 
-import io
+import json
 import os
 import sys
 import tempfile
 from pathlib import Path
 
 import numpy as np
+import requests
 from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 ROOT = Path(__file__).resolve().parent.parent          # repo root
 MODELS = ROOT / "Models"
+
+# LLM for threat assessment — OpenAI-compatible (Groq by default; works with
+# Gemini/OpenRouter/OpenAI by changing LLM_BASE_URL + LLM_MODEL). Key from env.
+LLM_API_KEY = os.environ.get("LLM_API_KEY", "")
+LLM_BASE_URL = os.environ.get("LLM_BASE_URL", "https://api.groq.com/openai/v1")
+LLM_MODEL = os.environ.get("LLM_MODEL", "llama-3.3-70b-versatile")
 
 app = FastAPI(title="WildScan Inference API")
 app.add_middleware(
@@ -175,3 +182,43 @@ async def classify_audio(file: UploadFile = File(...)):
         return {"top": preds[0], "candidates": preds[:5], "routed_to": preds[0]["category"]}
     finally:
         os.unlink(tmp)
+
+
+@app.post("/assess")
+async def assess(payload: dict):
+    """LLM threat assessment for a classified species. Body: {"name": "..."}.
+    Returns a 3-sentence summary + a threat level (safe|caution|dangerous).
+    Key is server-side (LLM_API_KEY) so it never reaches the browser."""
+    name = (payload.get("name") or payload.get("label") or "").strip()
+    if not name:
+        raise HTTPException(400, "Missing 'name'")
+    if not LLM_API_KEY:
+        raise HTTPException(503, "Threat assessment not configured (set LLM_API_KEY).")
+
+    system = ('You are a wildlife safety assistant. Respond ONLY with JSON: '
+              '{"summary": "<exactly 3 sentences>", "threat_level": "safe|caution|dangerous"}. '
+              'threat_level reflects danger to humans.')
+    user = f"give me a 3 sentence summary on {name} and a threat level to humans"
+    body = {"model": LLM_MODEL, "temperature": 0.3,
+            "response_format": {"type": "json_object"},
+            "messages": [{"role": "system", "content": system},
+                         {"role": "user", "content": user}]}
+    try:
+        r = requests.post(f"{LLM_BASE_URL}/chat/completions",
+                          headers={"Authorization": f"Bearer {LLM_API_KEY}"},
+                          json=body, timeout=30)
+    except Exception as e:
+        raise HTTPException(502, f"LLM request failed: {e}")
+    if r.status_code != 200:
+        raise HTTPException(502, f"LLM error {r.status_code}: {r.text[:200]}")
+
+    content = r.json()["choices"][0]["message"]["content"]
+    try:
+        data = json.loads(content)
+        summary = data.get("summary", content)
+        level = str(data.get("threat_level", "caution")).lower()
+    except Exception:
+        summary, level = content, "caution"
+    if level not in ("safe", "caution", "dangerous"):
+        level = "caution"
+    return {"summary": summary, "threat_level": level}

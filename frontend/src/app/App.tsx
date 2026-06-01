@@ -126,6 +126,22 @@ export default function App() {
         habitat: top.examples ? `Examples: ${top.examples}` : data.routed_to,
         guidance: others.length ? ['Other possibilities:', ...others] : ['No strong alternatives.'],
       };
+      // LLM threat assessment (runs after the model output; key stays server-side)
+      try {
+        const ares = await fetch(`${API_URL}/assess`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: `${classification.species} (${classification.scientificName})` }),
+        });
+        if (ares.ok) {
+          const a = await ares.json();
+          classification.description = a.summary || classification.description;
+          classification.threatLevel = (a.threat_level as Classification['threatLevel']) || 'safe';
+        }
+      } catch {
+        /* assessment unavailable — keep the model-info description */
+      }
+
       setResult(classification);
       setHistory((prev) => [{ ...classification, timestamp: new Date() }, ...prev]);
     } catch (e: any) {

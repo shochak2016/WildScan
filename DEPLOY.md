@@ -17,6 +17,9 @@ The models are in **Git LFS**, so the host must pull them.
    - **Enable Git LFS** for the repo in the host settings (so weights download as real bytes, not pointers).
 2. Env vars:
    - `CORS_ORIGINS=https://<your-vercel-app>.vercel.app` (lock CORS to your frontend).
+   - `LLM_API_KEY=<your key>` — enables the `/assess` threat summary. Free key from
+     [Groq](https://console.groq.com/keys). (Optional: `LLM_BASE_URL`, `LLM_MODEL` to
+     use Gemini/OpenRouter/OpenAI instead of Groq's default.)
    - `PORT` is provided by the host; the container respects it.
 3. Deploy. Verify:
    ```bash
