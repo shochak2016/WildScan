@@ -6,7 +6,21 @@ import { Loader2, Camera, Clock } from 'lucide-react';
 
 type Tab = 'scan' | 'history';
 
-// Mock ML classification data
+// Backend inference API (set VITE_API_URL in Vercel to your Render/Railway URL)
+const API_URL = (import.meta as any).env?.VITE_API_URL ?? 'http://localhost:8000';
+
+interface Classification {
+  species: string;
+  scientificName: string;
+  confidence: number; // 0-100
+  threatLevel: 'safe' | 'caution' | 'dangerous';
+  description: string;
+  habitat: string;
+  guidance: string[];
+  category?: string;
+}
+
+// Mock ML classification data (unused — kept for reference)
 const mockClassifications = {
   image: [
     {
@@ -73,28 +87,64 @@ const mockClassifications = {
 export default function App() {
   const [activeTab, setActiveTab] = useState<Tab>('scan');
   const [isProcessing, setIsProcessing] = useState(false);
-  const [result, setResult] = useState<typeof mockClassifications.image[0] | null>(null);
+  const [result, setResult] = useState<Classification | null>(null);
   const [uploadedFile, setUploadedFile] = useState<{ url: string; type: string } | null>(null);
-  const [history, setHistory] = useState<Array<typeof mockClassifications.image[0] & { timestamp: Date }>>([]);
+  const [history, setHistory] = useState<Array<Classification & { timestamp: Date }>>([]);
 
   const handleUpload = async (file: File, type: 'image' | 'audio') => {
     setIsProcessing(true);
     setResult(null);
 
-    // Create preview URL
+    // Preview URL
     const url = URL.createObjectURL(file);
     setUploadedFile({ url, type: file.type });
 
-    // Simulate ML processing delay
-    await new Promise((resolve) => setTimeout(resolve, 2000));
+    try {
+      const form = new FormData();
+      form.append('file', file);
+      // image auto-routes (run-all + max confidence); audio = birds
+      const res = await fetch(`${API_URL}/classify/${type}`, { method: 'POST', body: form });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.detail || `Server error ${res.status}`);
+      }
+      const data = await res.json();
+      const top = data.top;
+      const others = (data.candidates || [])
+        .slice(1)
+        .map((c: any) => `${c.label} (${c.scientific_name}) — ${Math.round(c.confidence * 100)}%`);
 
-    // Mock classification result
-    const classifications = type === 'image' ? mockClassifications.image : mockClassifications.audio;
-    const randomResult = classifications[Math.floor(Math.random() * classifications.length)];
-
-    setResult(randomResult);
-    setHistory((prev) => [{ ...randomResult, timestamp: new Date() }, ...prev]);
-    setIsProcessing(false);
+      const classification: Classification = {
+        species: top.label,
+        scientificName: top.scientific_name,
+        confidence: Math.round(top.confidence * 100),
+        threatLevel: 'safe',
+        category: data.routed_to,
+        description:
+          `Identified as ${data.routed_to} by the ${top.model} model.` +
+          (top.examples ? ` e.g. ${top.examples}.` : ''),
+        habitat: top.examples ? `Examples: ${top.examples}` : data.routed_to,
+        guidance: others.length ? ['Other possibilities:', ...others] : ['No strong alternatives.'],
+      };
+      setResult(classification);
+      setHistory((prev) => [{ ...classification, timestamp: new Date() }, ...prev]);
+    } catch (e: any) {
+      setResult({
+        species: 'Classification failed',
+        scientificName: '',
+        confidence: 0,
+        threatLevel: 'caution',
+        category: '',
+        description: e?.message || 'Could not reach the model API.',
+        habitat: `API: ${API_URL}`,
+        guidance: [
+          'Make sure the backend is running and reachable.',
+          'In Vercel, set VITE_API_URL to your Render/Railway backend URL.',
+        ],
+      });
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const handleClearHistory = () => {

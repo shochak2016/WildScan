@@ -30,3 +30,9 @@ Data/bird/recordings.csv
 # Ship the ensemble weights (16 MB + 26 MB, both < GitHub's 100 MB/file limit)
 !Models/bird/model_b0.pth
 !Models/bird/model_b1.pth
+
+# Local frontend env
+.env
+.env.local
+__pycache__/
+*.pyc
