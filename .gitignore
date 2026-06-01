@@ -1,8 +1,8 @@
 node_modules/
 dist/
 .DS_Store
-Data/WildScan_Data/animal_phylum_data/all_images/*
-Data/WildScan_Data/animal_phylum_data/all_csvs/
+Data/animal_phylum/all_images/*
+Data/animal_phylum/all_csvs/
 images/
 *.jpg
 *.png
@@ -12,19 +12,27 @@ cleaned_dataset.csv
 # Python venv
 .venv/
 
-# Bird audio classifier — secrets + raw audio + precomputed spectrograms (large, regenerable)
-Bird_Classification_deployment/.xc_api_key
-Bird_Classification_deployment/recordings.csv
-Bird_Classification_deployment/spectrograms.csv
-Bird_Classification_deployment/sweep_results.csv
-Bird_Classification_deployment/audio/
-Bird_Classification_deployment/spectrograms/
+# Bird classifier — secrets + raw audio + precomputed spectrograms (large, regenerable).
+# bird_classifier.py writes these under its own dir (Models/bird/) at runtime by default.
+Models/bird/.xc_api_key
+Models/bird/recordings.csv
+Models/bird/spectrograms.csv
+Models/bird/sweep_results.csv
+Models/bird/audio/
+Models/bird/spectrograms/
+Models/bird/*.log
+Data/bird/recordings.csv
 *.mp3
 *.wav
 *.ogg
 *.npy
-Bird_Classification_deployment/*.log
 
 # Ship the ensemble weights (16 MB + 26 MB, both < GitHub's 100 MB/file limit)
-!Bird_Classification_deployment/model_b0.pth
-!Bird_Classification_deployment/model_b1.pth
+!Models/bird/model_b0.pth
+!Models/bird/model_b1.pth
+
+# Local frontend env
+.env
+.env.local
+__pycache__/
+*.pyc

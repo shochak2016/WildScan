@@ -1,0 +1,14 @@
+# CPU PyTorch wheels (smaller; no CUDA) for container hosts like Render/Railway
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch
+torchvision
+timm
+fastapi
+uvicorn[standard]
+python-multipart
+librosa
+soundfile
+scipy
+numpy
+pillow
+requests

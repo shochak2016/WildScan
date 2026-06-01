@@ -39,7 +39,8 @@ import warnings
 from pathlib import Path
 
 import numpy as np
-import pandas as pd
+# pandas + scikit-learn are imported lazily inside the data/training commands only,
+# so the inference API (load_models/predict) never pulls them in.
 
 warnings.filterwarnings("ignore")
 HERE = Path(__file__).resolve().parent
@@ -166,6 +167,7 @@ def download_one(rec, genus, audio_dir):
 
 
 def cmd_download(args):
+    import pandas as pd
     from concurrent.futures import ThreadPoolExecutor, as_completed
     from tqdm import tqdm
     key = get_api_key()
@@ -277,6 +279,7 @@ def _process_recording(task):
 
 
 def cmd_preprocess(args):
+    import pandas as pd
     from concurrent.futures import ProcessPoolExecutor, as_completed
     from tqdm import tqdm
     data_dir = Path(args.data_dir)
@@ -463,6 +466,7 @@ def train_one(cfg, epochs, data, device, save_path=None, verbose=False):
 
 
 def prepare_data(data_dir, ram_cache=True, seed=42):
+    import pandas as pd
     df = pd.read_csv(Path(data_dir) / "spectrograms.csv")
     genera = sorted(df["genus"].unique())
     l2i = {g: i for i, g in enumerate(genera)}
@@ -515,6 +519,7 @@ def cmd_train(args):
 
 
 def cmd_sweep(args):
+    import pandas as pd
     import torch
     torch.backends.cudnn.benchmark = True
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -679,6 +684,7 @@ def _tta_work(task):
 
 
 def cmd_tta_eval(args):
+    import pandas as pd
     from concurrent.futures import ProcessPoolExecutor
     from tqdm import tqdm
     dd = Path(args.data_dir)
