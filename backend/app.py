@@ -186,11 +186,70 @@ class AmphibianModel:
                         "category": self.category, "model": self.name})
         return out
 
+class PlantModel:
+    name, category, kind = "plant", "Plants", "image"
+    WEIGHTS = "plant/best_plants_combined_model.pth"
+
+    SPECIES = [
+        "Achillea_millefolium",
+        "Alliaria_petiolata",
+        "Arisaema_triphyllum",
+        "Dactylis_glomerata",
+        "Equisetum_arvense",
+        "Juniperus_virginiana",
+        "Maianthemum_racemosum",
+        "Onoclea_sensibilis",
+        "Phragmites_australis",
+        "Pinus_strobus",
+        "Pinus_sylvestris",
+        "Polystichum_acrostichoides",
+        "Pteridium_aquilinum",
+        "Trifolium_pratense",
+        "Trifolium_repens",
+        "Tsuga_canadensis",
+    ]
+
+    def __init__(self):
+        import torch
+        from torchvision import transforms, models
+        self.torch = torch
+        self.model = models.resnet18(weights=None)
+        self.model.fc = torch.nn.Linear(self.model.fc.in_features, len(self.SPECIES))
+        sd = torch.load(MODELS / self.WEIGHTS, map_location="cpu", weights_only=False)
+        self.model.load_state_dict(sd)
+        self.model.eval()
+        self.tf = transforms.Compose([
+            transforms.Resize((224, 224)),
+            transforms.ToTensor(),
+            transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
+        ])
+
+    def predict(self, path, top_k=5):
+        import torch.nn.functional as F
+        from PIL import Image
+        x = self.tf(Image.open(path).convert("RGB")).unsqueeze(0)
+        with self.torch.no_grad():
+            probs = F.softmax(self.model(x), dim=1)[0].numpy()
+        order = probs.argsort()[::-1][:top_k]
+        out = []
+        for i in order:
+            i = int(i)
+            label = self.SPECIES[i].replace("_", " ")
+            out.append({
+                "label": label,
+                "scientific_name": label,
+                "examples": "",
+                "confidence": float(probs[i]),
+                "category": self.category,
+                "model": self.name,
+            })
+        return out
 
 # Register model classes with the weight file that gates loading them.
 IMAGE_MODELS = [
     (FungiModel, MODELS / "fungi" / "best_model.pth"),
     (AnimalModel, MODELS / "california_animal" / "final_production_wildscan_model.pth"),
+    (PlantModel, MODELS / "plant" / "best_plants_combined_model.pth"),
 ]
 AUDIO_MODELS = [
     (BirdModel, MODELS / "bird" / "model_b0.pth"),
