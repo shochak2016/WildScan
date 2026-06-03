@@ -84,7 +84,7 @@ RANDOM_STATE = 42
 # Recommended generalizable setting:
 # Use all species with enough clips instead of only top N.
 TOP_N_SPECIES = None
-MIN_SOUNDS_PER_SPECIES = 80
+MIN_SOUNDS_PER_SPECIES = 20
 
 # Leave this as None for generalization.
 # Use this only for a controlled high-accuracy experiment.
